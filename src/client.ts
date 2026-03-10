@@ -1,5 +1,4 @@
 import * as cheerio from 'cheerio';
-import iconv from 'iconv-lite';
 
 export interface CommandInfo {
   name: string;
@@ -34,8 +33,7 @@ export class YamahaDocClient {
       throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
     }
 
-    const buffer = await response.arrayBuffer();
-    const html = iconv.decode(Buffer.from(buffer), 'utf-8');
+    const html = await response.text();
     this.cache.set(url, html);
     return html;
   }

@@ -6,9 +6,18 @@ vi.mock('./client.js', () => {
   return {
     YamahaDocClient: vi.fn().mockImplementation(function() {
       return {
-        listCategoriesAndCommands: vi.fn().mockResolvedValue([
-          { name: 'Category 1', commands: [{ command: 'cmd1', description: 'desc1' }] }
+        listAllCategoriesAndCommands: vi.fn().mockResolvedValue([
+          { id: 'cat-1', name: 'Category 1', subCategories: [], commands: [{ command: 'cmd1', description: 'desc1' }] }
         ]),
+        listCategories: vi.fn().mockResolvedValue([
+          { id: 'cat-1', name: 'Category 1', subCategories: [], commands: [] }
+        ]),
+        listCommandsByCategory: vi.fn().mockImplementation((name: string) => {
+          if (name === 'Category 1') {
+            return Promise.resolve([{ command: 'cmd1', description: 'desc1' }]);
+          }
+          return Promise.resolve([]);
+        }),
         resolveCommandPath: vi.fn().mockImplementation((q: string) => {
           if (q === 'cmd1') return Promise.resolve('p1.html');
           return Promise.resolve(null);

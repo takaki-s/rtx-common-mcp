@@ -1,9 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { listCommandsByCategoryTool } from './list-commands.js';
 import { YamahaDocClient, CommandInfo } from '../client.js';
+import { mockYamahaFetch } from '../test-utils.js';
 
 describe('listCommandsByCategoryTool (Integration)', () => {
   const client = new YamahaDocClient();
+
+  beforeEach(() => {
+    mockYamahaFetch();
+  });
+
+  afterEach(() => {
+    (globalThis as unknown as { fetch?: typeof fetch }).fetch = undefined;
+  });
 
   it('should return real commands for a valid live category', async () => {
     const result = await listCommandsByCategoryTool.handler(client, { category_name: '状態の表示' });

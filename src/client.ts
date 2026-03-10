@@ -6,7 +6,9 @@ export interface CommandInfo {
 }
 
 export interface Category {
+  id: string;
   name: string;
+  subCategories: Category[];
   commands: CommandInfo[];
 }
 
@@ -24,10 +26,9 @@ export interface CommandDetail {
 export class YamahaDocClient {
   private readonly baseUrl = 'https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/';
   private cache = new Map<string, string>();
-  // Internal mapping of command name to HTML path
   private commandToPathMap = new Map<string, string>();
-  // Internal mapping of HTML path to exact command name
   private pathToCommandMap = new Map<string, string>();
+  private tocTree: Category[] | null = null;
 
   private async fetchHtml(path: string): Promise<string> {
     const url = this.baseUrl + path;
@@ -44,9 +45,6 @@ export class YamahaDocClient {
     return html;
   }
 
-  /**
-   * Builds the internal bidirectional mapping between command strings and HTML paths.
-   */
   async buildCommandIndex(): Promise<void> {
     if (this.commandToPathMap.size > 0) return;
 
@@ -63,51 +61,112 @@ export class YamahaDocClient {
     });
   }
 
-  async listCategoriesAndCommands(): Promise<Category[]> {
-    await this.buildCommandIndex();
+  /**
+   * Helper to clean names (remove numbering and trailing garbage)
+   */
+  private cleanName(name: string): string {
+    return name.replace(/^\d+(\.\d+)*\s*/, '').trim();
+  }
 
+  private async buildTocTree(): Promise<Category[]> {
+    await this.buildCommandIndex();
+    if (this.tocTree) return this.tocTree;
     const html = await this.fetchHtml('toc.html');
     const $ = cheerio.load(html);
-    const categories: Category[] = [];
+    const rootLis = $('ul.map.bookmap').first().children('li');
+    const rootCategories: Category[] = [];
 
-    $('li.chapter').each((_, elem) => {
-      const chapterLink = $(elem).find('> a');
-      const categoryName = chapterLink.text().trim();
-      
-      const commands: CommandInfo[] = [];
-      $(elem).find('li.topicref a').each((_, a) => {
-        const descriptiveName = $(a).text().trim();
-        const href = $(a).attr('href');
-        
-        if (href && !href.endsWith('_chapter.html') && href !== chapterLink.attr('href')) {
-          const exactCommand = this.pathToCommandMap.get(href) ?? descriptiveName;
-          commands.push({ 
-            command: exactCommand, 
-            description: descriptiveName.replace(/^\d+(\.\d+)*\s*/, '') // Clean numbering
-          });
-        }
-      });
+    rootLis.each((_, li) => {
+      const node = this.parseTocNode($, $(li));
+      if (node) rootCategories.push(node);
+    });
 
-      if (commands.length > 0) {
-        categories.push({ 
-          name: categoryName.replace(/^\d+\.\s*/, ''), 
-          commands 
-        });
+    this.tocTree = rootCategories;
+    return rootCategories;
+  }
+
+  private parseTocNode($: cheerio.CheerioAPI, li: cheerio.Cheerio<cheerio.Element>): Category | null {
+    const link = li.children('a').first();
+    const rawName = link.text();
+    const name = this.cleanName(rawName);
+    const href = link.attr('href');
+    const id = href ?? name;
+    const subCategories: Category[] = [];
+    const commands: CommandInfo[] = [];
+
+    li.children('ul').children('li').each((_, child) => {
+      const childLi = $(child);
+      const childLink = childLi.children('a').first();
+      const childNameRaw = childLink.text();
+      const childName = this.cleanName(childNameRaw);
+      const childHref = childLink.attr('href');
+
+      if (childHref && this.pathToCommandMap.has(childHref)) {
+        const exactCommand = this.pathToCommandMap.get(childHref)!;
+        commands.push({ command: exactCommand, description: childName });
+      } else if (childName) {
+        const childNode = this.parseTocNode($, childLi);
+        if (childNode) subCategories.push(childNode);
       }
     });
 
-    return categories;
+    if (!name) return null;
+    return { id, name, subCategories, commands };
+  }
+
+  private findCategoryById(nodes: Category[], id: string): Category | null {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      const found = this.findCategoryById(node.subCategories, id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  private findCategoryByName(nodes: Category[], name: string): Category | null {
+    for (const node of nodes) {
+      if (node.name === name) return node;
+      const found = this.findCategoryByName(node.subCategories, name);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  async listCategories(parentId?: string): Promise<Category[]> {
+    const tree = await this.buildTocTree();
+    if (!parentId) return tree;
+    const node = this.findCategoryById(tree, parentId) ?? this.findCategoryByName(tree, parentId);
+    if (!node) return [];
+    return node.subCategories;
+  }
+
+  private collectCommands(node: Category, acc: CommandInfo[]): void {
+    acc.push(...node.commands);
+    for (const child of node.subCategories) {
+      this.collectCommands(child, acc);
+    }
+  }
+
+  async listAllCategoriesAndCommands(): Promise<Category[]> {
+    return this.buildTocTree();
+  }
+
+  async listCommandsByCategory(categoryId: string): Promise<CommandInfo[]> {
+    const tree = await this.buildTocTree();
+    const node = this.findCategoryById(tree, categoryId) ?? this.findCategoryByName(tree, categoryId);
+    if (!node) return [];
+    const commands: CommandInfo[] = [];
+    this.collectCommands(node, commands);
+    return commands;
   }
 
   async resolveCommandPath(query: string): Promise<string | null> {
     await this.buildCommandIndex();
     const normalizedQuery = query.toLowerCase().trim();
     
-    // 1. Exact match
     const path = this.commandToPathMap.get(normalizedQuery);
     if (path) return path;
 
-    // 2. Fallback to searching keys
     for (const [cmd, p] of this.commandToPathMap.entries()) {
       if (cmd.startsWith(normalizedQuery)) return p;
     }

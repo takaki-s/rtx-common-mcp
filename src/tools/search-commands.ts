@@ -1,4 +1,5 @@
 import { McpTool } from './index.js';
+import { CommandInfo, Category } from '../client.js';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 export const searchCommandsTool: McpTool = {
@@ -18,8 +19,19 @@ export const searchCommandsTool: McpTool = {
     }
 
     const normalizedQuery = query.toLowerCase();
-    const categories = await client.listCategoriesAndCommands();
-    const results = categories.flatMap(c => c.commands)
+    const categories = await client.listAllCategoriesAndCommands();
+    const flatten = (nodes: Category[]) => {
+      const out: CommandInfo[] = [];
+      const walk = (n: Category[]) => {
+        for (const node of n) {
+          out.push(...node.commands);
+          if (node.subCategories.length > 0) walk(node.subCategories);
+        }
+      };
+      walk(nodes);
+      return out;
+    };
+    const results = flatten(categories)
       .filter(cmd => 
         cmd.command.toLowerCase().includes(normalizedQuery) || 
         cmd.description.toLowerCase().includes(normalizedQuery)

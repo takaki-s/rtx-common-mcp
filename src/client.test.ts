@@ -1,15 +1,22 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { YamahaDocClient } from './client.js';
+import { mockYamahaFetch } from './test-utils.js';
 
 describe('YamahaDocClient Scraper', () => {
   let client: YamahaDocClient;
 
   beforeEach(() => {
+    mockYamahaFetch();
     client = new YamahaDocClient();
   });
 
+  afterEach(() => {
+    // Ensure no cross-test pollution for global fetch
+    (globalThis as unknown as { fetch?: typeof fetch }).fetch = undefined;
+  });
+
   it('should list categories with valid names', async () => {
-    const categories = await client.listCategoriesAndCommands();
+    const categories = await client.listAllCategoriesAndCommands();
     expect(categories.length).toBeGreaterThan(0);
     
     categories.forEach(cat => {
@@ -23,7 +30,7 @@ describe('YamahaDocClient Scraper', () => {
   });
 
   it('should provide exact command names in the list', async () => {
-    const categories = await client.listCategoriesAndCommands();
+    const categories = await client.listAllCategoriesAndCommands();
     const statusChapter = categories.find(c => c.name === '状態の表示');
     expect(statusChapter).toBeDefined();
     

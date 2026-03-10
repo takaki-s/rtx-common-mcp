@@ -3,7 +3,7 @@ import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 export const listCommandsByCategoryTool: McpTool = {
   name: 'list_commands_by_category',
-  description: 'Get all commands within a specific functional group.',
+  description: 'Get all commands within a specific functional group (recursively).',
   inputSchema: {
     type: 'object',
     properties: {
@@ -17,15 +17,13 @@ export const listCommandsByCategoryTool: McpTool = {
       throw new McpError(ErrorCode.InvalidParams, 'category_name must be a string.');
     }
 
-    const categories = await client.listCategoriesAndCommands();
-    const category = categories.find(c => c.name.includes(categoryName));
-    
-    if (!category) {
+    const commands = await client.listCommandsByCategory(categoryName);
+    if (commands.length === 0) {
       throw new McpError(ErrorCode.InvalidParams, `Category "${categoryName}" not found.`);
     }
 
     return {
-      content: [{ type: 'text', text: JSON.stringify(category.commands, null, 2) }],
+      content: [{ type: 'text', text: JSON.stringify(commands, null, 2) }],
     };
   },
 };

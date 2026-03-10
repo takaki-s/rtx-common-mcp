@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 import iconv from 'iconv-lite';
 
@@ -30,11 +29,13 @@ export class YamahaDocClient {
     const url = this.baseUrl + path;
     if (this.cache.has(url)) return this.cache.get(url);
 
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer',
-    });
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+    }
 
-    const html = iconv.decode(Buffer.from(response.data), 'utf-8');
+    const buffer = await response.arrayBuffer();
+    const html = iconv.decode(Buffer.from(buffer), 'utf-8');
     this.cache.set(url, html);
     return html;
   }

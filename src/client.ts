@@ -44,25 +44,23 @@ export class YamahaDocClient {
     const $ = cheerio.load(html);
     const categories: Category[] = [];
 
-    // Table of Contents chapters are usually <li> with class chapter or topicref
-    $('li.chapter, li.topicref').each((_, elem) => {
+    // Chapters are top-level li with class chapter
+    $('li.chapter').each((_, elem) => {
       const chapterLink = $(elem).find('> a');
       const categoryName = chapterLink.text().trim();
       
-      // We only care about chapters that have nested commands
       const commands: CommandInfo[] = [];
-      $(elem).find('li a').each((_, a) => {
+      // Find all nested topicref links
+      $(elem).find('li.topicref a').each((_, a) => {
         const name = $(a).text().trim();
         const href = $(a).attr('href');
         
-        // Skip links to chapter summaries themselves
         if (name && href && !href.endsWith('_chapter.html') && href !== chapterLink.attr('href')) {
           commands.push({ name, path: href });
         }
       });
 
       if (commands.length > 0) {
-        // Remove numbering (e.g., "58. Status") from category name
         const cleanName = categoryName.replace(/^\d+\.\s*/, '');
         categories.push({ name: cleanName, commands });
       }

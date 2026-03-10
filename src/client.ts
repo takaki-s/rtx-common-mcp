@@ -93,6 +93,11 @@ export class YamahaDocClient {
       } else if (title.includes('説明')) {
         detail.description = $(section).find('p, div').not('h2').text().trim();
       } else if (title.includes('設定値') || title.includes('パラメータ')) {
+        // If the title also contains '初期値' (Default), we might want to capture it
+        if (title.includes('初期値')) {
+          detail.defaultValue = $(section).find('li.li:contains("初期値"), p:contains("初期値")').text().trim();
+        }
+        
         $(section).find('li.li').each((_, li) => {
           const paramName = $(li).find('.keyword.varname, b').first().text().trim();
           const paramDesc = $(li).text().replace(paramName, '').trim();

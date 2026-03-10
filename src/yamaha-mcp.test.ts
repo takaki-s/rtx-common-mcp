@@ -32,6 +32,7 @@ describe('YamahaDocClient Scraper', () => {
       expect(detail.name).toContain('IP の経路情報テーブルの表示');
       expect(detail.syntax).toContain('show ip route [destination]');
       expect(detail.description).toContain('ゲートウェイを表示する');
+      expect(detail.defaultValue).toBeDefined();
     }
   });
 

@@ -1,0 +1,30 @@
+{
+  "name": "rtx-common-mcp",
+  "type": "module",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "bin": {
+    "rtx-common-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "iconv-lite": "^0.7.2"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.35",
+    "@types/node": "^25.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

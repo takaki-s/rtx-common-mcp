@@ -7,7 +7,7 @@ vi.mock('./client.js', () => {
     YamahaDocClient: vi.fn().mockImplementation(function() {
       return {
         listCategoriesAndCommands: vi.fn().mockResolvedValue([
-          { name: 'Category 1', commands: [{ name: 'cmd1', path: 'p1.html' }] }
+          { name: 'Category 1', commands: [{ command: 'cmd1', description: 'desc1' }] }
         ]),
         resolveCommandPath: vi.fn().mockImplementation((q: string) => {
           if (q === 'cmd1') return Promise.resolve('p1.html');
@@ -16,7 +16,7 @@ vi.mock('./client.js', () => {
         getCommandDetail: vi.fn().mockImplementation((p: string) => {
           if (p === 'p1.html') {
             return Promise.resolve({
-              name: 'cmd1',
+              command: 'cmd1',
               syntax: ['syntax1'],
               description: 'desc1',
               parameters: [],

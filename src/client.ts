@@ -1,9 +1,8 @@
 import * as cheerio from 'cheerio';
 
 export interface CommandInfo {
-  name: string;
-  path: string;
-  description?: string;
+  command: string;
+  description: string;
 }
 
 export interface Category {
@@ -12,7 +11,7 @@ export interface Category {
 }
 
 export interface CommandDetail {
-  name: string;
+  command: string;
   syntax: string[];
   description: string;
   parameters: { name: string; description: string }[];
@@ -25,6 +24,10 @@ export interface CommandDetail {
 export class YamahaDocClient {
   private readonly baseUrl = 'https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/';
   private cache = new Map<string, string>();
+  // Internal mapping of command name to HTML path
+  private commandToPathMap = new Map<string, string>();
+  // Internal mapping of HTML path to exact command name
+  private pathToCommandMap = new Map<string, string>();
 
   private async fetchHtml(path: string): Promise<string> {
     const url = this.baseUrl + path;
@@ -41,67 +44,73 @@ export class YamahaDocClient {
     return html;
   }
 
+  /**
+   * Builds the internal bidirectional mapping between command strings and HTML paths.
+   */
+  async buildCommandIndex(): Promise<void> {
+    if (this.commandToPathMap.size > 0) return;
+
+    const html = await this.fetchHtml('cmdref_index.html');
+    const $ = cheerio.load(html);
+
+    $('li a').each((_, a) => {
+      const command = $(a).text().trim();
+      const href = $(a).attr('href');
+      if (command && href) {
+        this.commandToPathMap.set(command.toLowerCase(), href);
+        this.pathToCommandMap.set(href, command);
+      }
+    });
+  }
+
   async listCategoriesAndCommands(): Promise<Category[]> {
+    await this.buildCommandIndex();
+
     const html = await this.fetchHtml('toc.html');
     const $ = cheerio.load(html);
     const categories: Category[] = [];
 
-    // Chapters are top-level li with class chapter
     $('li.chapter').each((_, elem) => {
       const chapterLink = $(elem).find('> a');
       const categoryName = chapterLink.text().trim();
       
       const commands: CommandInfo[] = [];
-      // Find all nested topicref links
       $(elem).find('li.topicref a').each((_, a) => {
-        const name = $(a).text().trim();
+        const descriptiveName = $(a).text().trim();
         const href = $(a).attr('href');
         
-        if (name && href && !href.endsWith('_chapter.html') && href !== chapterLink.attr('href')) {
-          commands.push({ name, path: href });
+        if (href && !href.endsWith('_chapter.html') && href !== chapterLink.attr('href')) {
+          const exactCommand = this.pathToCommandMap.get(href) ?? descriptiveName;
+          commands.push({ 
+            command: exactCommand, 
+            description: descriptiveName.replace(/^\d+(\.\d+)*\s*/, '') // Clean numbering
+          });
         }
       });
 
       if (commands.length > 0) {
-        const cleanName = categoryName.replace(/^\d+\.\s*/, '');
-        categories.push({ name: cleanName, commands });
+        categories.push({ 
+          name: categoryName.replace(/^\d+\.\s*/, ''), 
+          commands 
+        });
       }
     });
 
     return categories;
   }
 
-  async getCommandIndex(): Promise<CommandInfo[]> {
-    const html = await this.fetchHtml('cmdref_index.html');
-    const $ = cheerio.load(html);
-    const index: CommandInfo[] = [];
-
-    $('li a').each((_, a) => {
-      const name = $(a).text().trim();
-      const href = $(a).attr('href');
-      if (name && href) {
-        index.push({ name, path: href });
-      }
-    });
-
-    return index;
-  }
-
   async resolveCommandPath(query: string): Promise<string | null> {
-    const index = await this.getCommandIndex();
+    await this.buildCommandIndex();
     const normalizedQuery = query.toLowerCase().trim();
     
     // 1. Exact match
-    const exact = index.find(c => c.name.toLowerCase() === normalizedQuery);
-    if (exact) return exact.path;
+    const path = this.commandToPathMap.get(normalizedQuery);
+    if (path) return path;
 
-    // 2. Starts with (e.g., "ip route" matches "ip route", "ip route detail")
-    const startsWith = index.find(c => c.name.toLowerCase().startsWith(normalizedQuery));
-    if (startsWith) return startsWith.path;
-
-    // 3. Includes
-    const includes = index.find(c => c.name.toLowerCase().includes(normalizedQuery));
-    if (includes) return includes.path;
+    // 2. Fallback to searching keys
+    for (const [cmd, p] of this.commandToPathMap.entries()) {
+      if (cmd.startsWith(normalizedQuery)) return p;
+    }
 
     return null;
   }
@@ -110,9 +119,9 @@ export class YamahaDocClient {
     const html = await this.fetchHtml(path);
     const $ = cheerio.load(html);
 
-    const name = $('h1.title').first().text().trim() || path;
+    const commandName = this.pathToCommandMap.get(path) ?? $('h1.title').first().text().trim() ?? path;
     const detail: CommandDetail = {
-      name,
+      command: commandName,
       syntax: [],
       description: '',
       parameters: [],
@@ -121,7 +130,6 @@ export class YamahaDocClient {
       applicableModels: [],
     };
 
-    // Yamaha DITA structure
     $('div.section').each((_, section) => {
       const title = $(section).find('h2.sectiontitle').text().trim();
       
@@ -132,7 +140,6 @@ export class YamahaDocClient {
       } else if (title.includes('説明')) {
         detail.description = $(section).find('p, div').not('h2').text().trim();
       } else if (title.includes('設定値') || title.includes('パラメータ')) {
-        // If the title also contains '初期値' (Default), we might want to capture it
         if (title.includes('初期値')) {
           detail.defaultValue = $(section).find('li.li:contains("初期値"), p:contains("初期値")').text().trim();
         }

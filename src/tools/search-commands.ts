@@ -20,7 +20,10 @@ export const searchCommandsTool: McpTool = {
     const normalizedQuery = query.toLowerCase();
     const categories = await client.listCategoriesAndCommands();
     const results = categories.flatMap(c => c.commands)
-      .filter(cmd => cmd.name.toLowerCase().includes(normalizedQuery) || cmd.path.toLowerCase().includes(normalizedQuery));
+      .filter(cmd => 
+        cmd.command.toLowerCase().includes(normalizedQuery) || 
+        cmd.description.toLowerCase().includes(normalizedQuery)
+      );
 
     return {
       content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],

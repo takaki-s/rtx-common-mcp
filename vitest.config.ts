@@ -10,8 +10,6 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
-        'src/test-client.ts',
-        'src/index.ts', // Entry point usually just bootstraps
       ],
     },
   },

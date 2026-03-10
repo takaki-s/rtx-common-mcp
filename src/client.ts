@@ -22,11 +22,12 @@ export interface CommandDetail {
 
 export class YamahaDocClient {
   private readonly baseUrl = 'https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/';
-  private cache: Map<string, any> = new Map();
+  private cache = new Map<string, string>();
 
   private async fetchHtml(path: string): Promise<string> {
     const url = this.baseUrl + path;
-    if (this.cache.has(url)) return this.cache.get(url);
+    const cached = this.cache.get(url);
+    if (cached) return cached;
 
     const response = await fetch(url);
     if (!response.ok) {

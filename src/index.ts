@@ -31,14 +31,14 @@ class YamahaReferenceServer {
     
     // Error handling
     this.server.onerror = (error) => console.error('[MCP Error]', error);
-    process.on('SIGINT', async () => {
-      await this.server.close();
+    process.on('SIGINT', () => {
+      void this.server.close();
       process.exit(0);
     });
   }
 
   private setupTools() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    this.server.setRequestHandler(ListToolsRequestSchema, () => ({
       tools: [
         {
           name: 'list_categories',
@@ -144,4 +144,4 @@ class YamahaReferenceServer {
 }
 
 const server = new YamahaReferenceServer();
-server.run().catch(console.error);
+void server.run().catch(console.error);

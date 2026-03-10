@@ -4,42 +4,45 @@ This plan outlines the development of a **Yamaha RTX Command Reference MCP Serve
 
 ## 1. Project Overview
 - **Goal**: Create an MCP server that provides structured CLI command reference data.
-- **Tech Stack**: Node.js, TypeScript, `@modelcontextprotocol/sdk`.
+- **Tech Stack**: Node.js 24, TypeScript, `@modelcontextprotocol/sdk`, `pnpm`, `cheerio`, `vitest`.
 - **Data Source**: Live scraping of `https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/`.
 - **Connectivity**: Reference-only (no direct router connection required).
 
 ## 2. Implementation Phases
 
-### Phase 1: Research & Discovery
-- **HTML Analysis**: Analyze the DOM structure of the [RT-Common index](https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/) to map categories to command lists.
-- **Command Page Mapping**: Identify patterns for:
-    - **Syntax** (書式)
-    - **Parameters** (設定値リスト)
-    - **Description** (説明)
-    - **Default Values** (初期値)
-- **Encoding Verification**: Confirm if the pages use `Shift_JIS` or `UTF-8` and implement `iconv-lite` if necessary.
+### Phase 1: Research & Discovery (Done)
+- Analyze manual structure (frameset, DITA-generated content).
+- Identify key navigation pages (`toc.html`, `cmdref_index.html`).
+- Confirm encoding (UTF-8).
 
-### Phase 2: Project Infrastructure (TypeScript)
-- **Scaffold**: Initialize a Node.js project with `typescript`, `@modelcontextprotocol/sdk`, `axios`, and `cheerio`.
-- **Configuration**: Set up `tsconfig.json` for ESM and modern Node.js features.
-- **Doc Client**: Build a central `YamahaDocClient` class for HTTP requests, caching, and HTML parsing.
+### Phase 2: Infrastructure & Tooling (Done)
+- Initialize project with modern TypeScript/ESM settings.
+- Switch to `pnpm` for efficient dependency management.
+- Introduce `tsx` for easier testing/debugging.
+- Introduce `eslint` with strict type-checked rules.
 
-### Phase 3: MCP Tool Implementation
-Implement four primary tools:
-1.  **`list_categories`**: Fetch the top-level functional groups (e.g., Interface, IP, Security, System Management).
-2.  **`list_commands_by_category`**: Retrieve a list of commands within a group, including short descriptions.
-3.  **`search_commands`**: Keyword-based search across indexed command names and descriptions.
-4.  **`get_command_details`**: Fetch a structured JSON object for a specific command (Syntax, Parameters, Description, Defaults, Examples).
+### Phase 3: Core Scraper Development (Done)
+- Implement `YamahaDocClient` with native `fetch`.
+- Robust recursive parsing for the hierarchical TOC.
+- Precise command resolution using the alphabetical index (`cmdref_index.html`).
 
-### Phase 4: Data Optimization & Robustness
-- **In-Memory Caching**: Implement TTL caching for lists and command details.
-- **Error Handling**: Gracefully handle 404s or site structure changes.
-- **Structured Output**: Ensure tools return data (Markdown/JSON) optimized for LLM consumption.
+### Phase 4: MCP Tool Implementation (Done)
+- `list_categories`: Browse functional chapters.
+- `list_commands_by_category`: List commands in a chapter.
+- `search_commands`: Keyword search across the index.
+- `get_command_details`: Get full documentation by command name.
 
-### Phase 5: Validation & Finalization
-- **Manual Testing**: Verify parsing accuracy for complex commands (e.g., `nat descriptor`, `ip filter`).
-- **MCP Inspector**: Use the MCP Inspector to validate protocol compliance.
+### Phase 5: Robust Testing (Done)
+- Set up **Vitest** with coverage reporting.
+- Achieve 94%+ logic coverage.
+- Verify resolution, parsing, and error handling.
+
+### Phase 6: Command Data Model Expansion (Next)
+- **Update CommandDetail Interface**: Add `notes` and `applicableModels`.
+- **Refine Parser**: Capture `[ノート]` and `[適用モデル]` sections formally.
+- **Enhanced Mapping**: Ensure combined sections like `[設定値及び初期値]` are fully decomposed.
 
 ## 3. Key Technical Considerations
-- **Japanese Content**: The documentation is in Japanese; the MCP server will preserve technical accuracy while providing a structure the LLM can translate or explain.
-- **Dynamic Scraping**: Since we are not using a static database, robust selectors are required to handle variations in the manual's layout.
+- **Native ESM**: All imports/exports use modern Node.js standards.
+- **LLM-First Design**: Tools accept intuitive command names instead of technical paths.
+- **Scalability**: Scraper handles varying DITA output patterns across the manual.

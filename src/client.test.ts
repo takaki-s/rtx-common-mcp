@@ -56,4 +56,16 @@ describe('YamahaDocClient Scraper', () => {
       expect(detail?.syntax.length).toBeGreaterThan(0);
     }
   });
+
+  it('should parse notes and applicable models if present', async () => {
+    // Administrator password usually has notes and models
+    const path = await client.resolveCommandPath('administrator password');
+    expect(path).not.toBeNull();
+    if (path) {
+      const detail = await client.getCommandDetail(path);
+      expect(detail).not.toBeNull();
+      // Most commands have applicable models
+      expect(detail?.applicableModels.length).toBeGreaterThan(0);
+    }
+  });
 });

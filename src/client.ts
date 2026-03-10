@@ -17,7 +17,9 @@ export interface CommandDetail {
   description: string;
   parameters: { name: string; description: string }[];
   defaultValue?: string;
+  notes: string[];
   examples: string[];
+  applicableModels: string[];
 }
 
 export class YamahaDocClient {
@@ -114,7 +116,9 @@ export class YamahaDocClient {
       syntax: [],
       description: '',
       parameters: [],
+      notes: [],
       examples: [],
+      applicableModels: [],
     };
 
     // Yamaha DITA structure
@@ -142,9 +146,19 @@ export class YamahaDocClient {
         });
       } else if (title.includes('初期値')) {
         detail.defaultValue = $(section).text().replace(title, '').trim();
+      } else if (title.includes('ノート')) {
+        $(section).find('p, li.li, span.ph, div').not('h2').each((_, elem) => {
+          const text = $(elem).text().trim();
+          if (text) detail.notes.push(text);
+        });
       } else if (title.includes('例')) {
         $(section).find('.pre.codeblock').each((_, pre) => {
           detail.examples.push($(pre).text().trim());
+        });
+      } else if (title.includes('適用モデル')) {
+        $(section).find('p, li.li, span.ph, div').not('h2').each((_, elem) => {
+          const text = $(elem).text().trim();
+          if (text) detail.applicableModels.push(text);
         });
       }
     });

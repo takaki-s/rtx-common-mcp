@@ -69,6 +69,41 @@ export class YamahaDocClient {
     return categories;
   }
 
+  async getCommandIndex(): Promise<CommandInfo[]> {
+    const html = await this.fetchHtml('cmdref_index.html');
+    const $ = cheerio.load(html);
+    const index: CommandInfo[] = [];
+
+    $('li a').each((_, a) => {
+      const name = $(a).text().trim();
+      const href = $(a).attr('href');
+      if (name && href) {
+        index.push({ name, path: href });
+      }
+    });
+
+    return index;
+  }
+
+  async resolveCommandPath(query: string): Promise<string | null> {
+    const index = await this.getCommandIndex();
+    const normalizedQuery = query.toLowerCase().trim();
+    
+    // 1. Exact match
+    const exact = index.find(c => c.name.toLowerCase() === normalizedQuery);
+    if (exact) return exact.path;
+
+    // 2. Starts with (e.g., "ip route" matches "ip route", "ip route detail")
+    const startsWith = index.find(c => c.name.toLowerCase().startsWith(normalizedQuery));
+    if (startsWith) return startsWith.path;
+
+    // 3. Includes
+    const includes = index.find(c => c.name.toLowerCase().includes(normalizedQuery));
+    if (includes) return includes.path;
+
+    return null;
+  }
+
   async getCommandDetail(path: string): Promise<CommandDetail | null> {
     const html = await this.fetchHtml(path);
     const $ = cheerio.load(html);

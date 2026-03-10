@@ -72,12 +72,12 @@ class YamahaReferenceServer {
           inputSchema: {
             type: 'object',
             properties: {
-              command_path: { 
+              command_name: { 
                 type: 'string', 
-                description: 'The filename or relative path of the command documentation (e.g., ip_route.html)' 
+                description: 'The name of the command (e.g., "ip route", "ping", "nat descriptor")' 
               },
             },
-            required: ['command_path'],
+            required: ['command_name'],
           },
         },
       ],
@@ -118,11 +118,17 @@ class YamahaReferenceServer {
         }
 
         case 'get_command_details': {
-          const path = request.params.arguments?.command_path as string;
-          const detail = await this.client.getCommandDetail(path);
+          const name = request.params.arguments?.command_name as string;
           
+          const path = await this.client.resolveCommandPath(name);
+
+          if (!path) {
+            throw new McpError(ErrorCode.InvalidParams, `Could not find command: "${name}"`);
+          }
+
+          const detail = await this.client.getCommandDetail(path);
           if (!detail) {
-            throw new McpError(ErrorCode.InvalidParams, `Command details for "${path}" not found.`);
+            throw new McpError(ErrorCode.InvalidParams, `Command details for "${name}" (path: ${path}) not found.`);
           }
 
           return {

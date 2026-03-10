@@ -8,12 +8,29 @@ describe('YamahaDocClient Scraper', () => {
     client = new YamahaDocClient();
   });
 
-  it('should list categories correctly from the live TOC', async () => {
+  it('should list categories with valid names', async () => {
     const categories = await client.listCategoriesAndCommands();
     expect(categories.length).toBeGreaterThan(0);
-    const statusChapter = categories.find(c => c.name.includes('状態の表示'));
-    expect(statusChapter).toBeDefined();
-    expect(statusChapter?.commands.length).toBeGreaterThan(10);
+    
+    // Check that every category has a non-empty name and doesn't just contain numbers
+    categories.forEach(cat => {
+      expect(typeof cat.name).toBe('string');
+      expect(cat.name.length).toBeGreaterThan(0);
+      // Ensure we haven't left numbering like "58. " at the start (cleanName logic)
+      expect(cat.name).not.toMatch(/^\d+\.\s/);
+    });
+
+    const names = categories.map(c => c.name);
+    expect(names).toContain('機器の設定');
+    expect(names).toContain('状態の表示');
+  });
+
+  it('should fetch a clean command index', async () => {
+    const index = await client.getCommandIndex();
+    expect(index.length).toBeGreaterThan(500); // There are many commands
+    const ping = index.find(c => c.name === 'ping');
+    expect(ping).toBeDefined();
+    expect(ping?.path).toBe('operation/ping.html');
   });
 
   it('should resolve command name to path', async () => {

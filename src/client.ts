@@ -1,5 +1,8 @@
 import * as cheerio from 'cheerio';
 
+type CheerioAPI = ReturnType<typeof cheerio.load>;
+type CheerioCollection = ReturnType<CheerioAPI>;
+
 export interface CommandInfo {
   command: string;
   description: string;
@@ -85,7 +88,7 @@ export class YamahaDocClient {
     return rootCategories;
   }
 
-  private parseTocNode($: cheerio.CheerioAPI, li: cheerio.Cheerio<cheerio.Element>): Category | null {
+  private parseTocNode($: CheerioAPI, li: CheerioCollection): Category | null {
     const link = li.children('a').first();
     const rawName = link.text();
     const name = this.cleanName(rawName);
@@ -94,7 +97,8 @@ export class YamahaDocClient {
     const subCategories: Category[] = [];
     const commands: CommandInfo[] = [];
 
-    li.children('ul').children('li').each((_, child) => {
+    const childLis = li.children('ul').children('li');
+    childLis.each((_, child) => {
       const childLi = $(child);
       const childLink = childLi.children('a').first();
       const childNameRaw = childLink.text();

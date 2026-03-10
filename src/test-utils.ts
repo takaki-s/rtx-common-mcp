@@ -9,7 +9,7 @@ const cmdIndexHtml = readFileSync(resolve(fixturesDir, 'cmdref_index.html'), 'ut
 const showIpRouteHtml = readFileSync(resolve(fixturesDir, 'show_ip_route.html'), 'utf8');
 
 export function mockYamahaFetch(): void {
-  vi.stubGlobal('fetch', async (url: string) => {
+  vi.stubGlobal('fetch', (url: string) => {
     const target = typeof url === 'string' ? url : String(url);
     const path = target.startsWith(baseUrl) ? target.slice(baseUrl.length) : target;
     let body = '';
@@ -18,19 +18,19 @@ export function mockYamahaFetch(): void {
     else if (path === 'showstatus/show_ip_route.html') body = showIpRouteHtml;
 
     if (!body) {
-      return {
+      return Promise.resolve({
         ok: false,
         status: 404,
         statusText: 'Not Found',
-        text: async () => '',
-      } as Response;
+        text: () => Promise.resolve(''),
+      } as Response);
     }
 
-    return {
+    return Promise.resolve({
       ok: true,
       status: 200,
       statusText: 'OK',
-      text: async () => body,
-    } as Response;
+      text: () => Promise.resolve(body),
+    } as Response);
   });
 }

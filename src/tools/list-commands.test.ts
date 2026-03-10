@@ -27,4 +27,11 @@ describe('listCommandsByCategoryTool (Integration)', () => {
       expect(ipRoute.description).toContain('IP の経路情報');
     }
   });
+
+  it('should collect commands from a large category', async () => {
+    const result = await listCommandsByCategoryTool.handler(client, { category_name: '機器の設定' });
+    const commands = JSON.parse(result.content[0].text) as CommandInfo[];
+    const loginPassword = commands.find((c) => c.command === 'login password');
+    expect(loginPassword).toBeDefined();
+  });
 });

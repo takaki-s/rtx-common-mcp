@@ -39,6 +39,17 @@ describe('YamahaDocClient Scraper', () => {
     expect(ipRoute?.description).toContain('IP の経路情報');
   });
 
+  it('should expose nested sub-categories from the TOC', async () => {
+    const children = await client.listCategories('機器の設定');
+    expect(children.length).toBeGreaterThan(0);
+    const names = children.map(c => c.name);
+    expect(names).toContain('拡張ライセンスの操作');
+
+    const nestedCommands = await client.listCommandsByCategory('拡張ライセンスの操作');
+    const commandNames = nestedCommands.map(c => c.command);
+    expect(commandNames).toContain('ex-license password');
+  });
+
   it('should resolve command name to path', async () => {
     const path = await client.resolveCommandPath('show ip route');
     expect(path).toContain('show_ip_route.html');

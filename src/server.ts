@@ -86,7 +86,7 @@ export class YamahaReferenceServer {
   /**
    * Internal tool handler logic, exposed for unit testing.
    */
-  async handleToolCall(name: string, args: any) {
+  async handleToolCall(name: string, args: Record<string, unknown> | undefined) {
     switch (name) {
       case 'list_categories': {
         const categories = await this.client.listCategoriesAndCommands();
@@ -96,7 +96,11 @@ export class YamahaReferenceServer {
       }
 
       case 'list_commands_by_category': {
-        const categoryName = args?.category_name as string;
+        const categoryName = args?.category_name;
+        if (typeof categoryName !== 'string') {
+          throw new McpError(ErrorCode.InvalidParams, 'category_name must be a string.');
+        }
+
         const categories = await this.client.listCategoriesAndCommands();
         const category = categories.find(c => c.name.includes(categoryName));
         
@@ -110,10 +114,15 @@ export class YamahaReferenceServer {
       }
 
       case 'search_commands': {
-        const query = (args?.query as string).toLowerCase();
+        const query = args?.query;
+        if (typeof query !== 'string') {
+          throw new McpError(ErrorCode.InvalidParams, 'query must be a string.');
+        }
+
+        const normalizedQuery = query.toLowerCase();
         const categories = await this.client.listCategoriesAndCommands();
         const results = categories.flatMap(c => c.commands)
-          .filter(cmd => cmd.name.toLowerCase().includes(query) || cmd.path.toLowerCase().includes(query));
+          .filter(cmd => cmd.name.toLowerCase().includes(normalizedQuery) || cmd.path.toLowerCase().includes(normalizedQuery));
 
         return {
           content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
@@ -121,7 +130,11 @@ export class YamahaReferenceServer {
       }
 
       case 'get_command_details': {
-        const cmdName = args?.command_name as string;
+        const cmdName = args?.command_name;
+        if (typeof cmdName !== 'string') {
+          throw new McpError(ErrorCode.InvalidParams, 'command_name must be a string.');
+        }
+
         const path = await this.client.resolveCommandPath(cmdName);
 
         if (!path) {

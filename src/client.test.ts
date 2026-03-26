@@ -55,6 +55,14 @@ describe('YamahaDocClient Scraper', () => {
     expect(path).toContain('show_ip_route.html');
   });
 
+  it('should resolve aliased commands to the same path', async () => {
+    const interfacePath = await client.resolveCommandPath('ipv6 interface rtadv send');
+    const ppPath = await client.resolveCommandPath('ipv6 pp rtadv send');
+
+    expect(interfacePath).toBe('ipv6/ipv6_interface_rtadv_send.html');
+    expect(ppPath).toBe(interfacePath);
+  });
+
   it('should fetch and parse "show ip route" detail by name', async () => {
     const path = await client.resolveCommandPath('show ip route');
     if (path) {
@@ -67,5 +75,32 @@ describe('YamahaDocClient Scraper', () => {
   it('should handle non-existent commands', async () => {
     const path = await client.resolveCommandPath('nonexistent-cmd-999');
     expect(path).toBeNull();
+  });
+
+  it('should keep command aliases searchable in category listings', async () => {
+    const categories = await client.listAllCategoriesAndCommands();
+    const commands: string[] = [];
+    const walk = (nodes: Awaited<ReturnType<typeof client.listAllCategoriesAndCommands>>) => {
+      for (const node of nodes) {
+        commands.push(...node.commands.map(command => command.command));
+        walk(node.subCategories);
+      }
+    };
+    walk(categories);
+
+    expect(commands).toContain('ipv6 interface rtadv send');
+    expect(commands).toContain('ipv6 pp rtadv send');
+  });
+
+  it('should prefer the requested alias in command details', async () => {
+    const path = await client.resolveCommandPath('ipv6 interface rtadv send');
+    expect(path).toBe('ipv6/ipv6_interface_rtadv_send.html');
+
+    if (path) {
+      const detail = await client.getCommandDetail(path, 'ipv6 interface rtadv send');
+      expect(detail?.command).toBe('ipv6 interface rtadv send');
+      expect(detail?.aliases).toContain('ipv6 interface rtadv send');
+      expect(detail?.aliases).toContain('ipv6 pp rtadv send');
+    }
   });
 });

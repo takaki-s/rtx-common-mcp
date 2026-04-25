@@ -5,7 +5,7 @@ import { Category, YamahaDocClient } from '../client.js';
 describe('searchCommandsTool', () => {
   const makeClient = (categories: Category[]) =>
     ({
-      listAllCategoriesAndCommands: async () => categories,
+      listAllCategoriesAndCommands: () => Promise.resolve(categories),
     }) as YamahaDocClient;
 
   it('should match a base command when the query includes parameter values', async () => {

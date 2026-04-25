@@ -91,7 +91,9 @@ pnpm watch
 
 ## データソース
 
-本ツールは Yamaha 公式マニュアルサイト [RTpro](https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/) のコンテンツをスクレイピングして使用します。コンテンツの著作権は Yamaha Corporation に帰属します。
+本ツールは Yamaha 公式マニュアルサイト [RTpro](https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/) のコンテンツをリアルタイムで取得して使用します。コンテンツの著作権は Yamaha Corporation に帰属します。本ツールはコンテンツを内部に保持・再配布するものではなく、参照のつど公式サイトへアクセスします。
+
+本ツールの使用はユーザー自身の責任で行ってください。
 
 ## ライセンス
 

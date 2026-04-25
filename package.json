@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
+  "files": ["dist"],
   "keywords": ["mcp", "yamaha", "rtx", "router", "cli", "llm"],
   "author": "takaki-s",
   "license": "MIT",

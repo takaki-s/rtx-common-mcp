@@ -32,10 +32,15 @@ export const searchCommandsTool: McpTool = {
       return out;
     };
     const results = flatten(categories)
-      .filter(cmd => 
-        cmd.command.toLowerCase().includes(normalizedQuery) || 
-        cmd.description.toLowerCase().includes(normalizedQuery)
-      );
+      .filter(cmd => {
+        const normalizedCommand = cmd.command.toLowerCase();
+        return (
+          normalizedCommand.includes(normalizedQuery) ||
+          normalizedQuery === normalizedCommand ||
+          normalizedQuery.startsWith(`${normalizedCommand} `) ||
+          cmd.description.toLowerCase().includes(normalizedQuery)
+        );
+      });
 
     return {
       content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],

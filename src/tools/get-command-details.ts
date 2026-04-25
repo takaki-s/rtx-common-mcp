@@ -26,7 +26,7 @@ export const getCommandDetailsTool: McpTool = {
       throw new McpError(ErrorCode.InvalidParams, `Could not find command: "${cmdName}"`);
     }
 
-    const detail = await client.getCommandDetail(path);
+    const detail = await client.getCommandDetail(path, cmdName);
     if (!detail) {
       throw new McpError(ErrorCode.InvalidParams, `Command details for "${cmdName}" (path: ${path}) not found.`);
     }

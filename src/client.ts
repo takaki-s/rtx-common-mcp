@@ -17,6 +17,7 @@ export interface Category {
 
 export interface CommandDetail {
   command: string;
+  aliases?: string[];
   syntax: string[];
   description: string;
   parameters: { name: string; description: string }[];
@@ -30,7 +31,7 @@ export class YamahaDocClient {
   private readonly baseUrl = 'https://www.rtpro.yamaha.co.jp/RT/manual/rt-common/';
   private cache = new Map<string, string>();
   private commandToPathMap = new Map<string, string>();
-  private pathToCommandMap = new Map<string, string>();
+  private pathToCommandsMap = new Map<string, string[]>();
   private tocTree: Category[] | null = null;
 
   private async fetchHtml(path: string): Promise<string> {
@@ -59,7 +60,9 @@ export class YamahaDocClient {
       const href = $(a).attr('href');
       if (command && href) {
         this.commandToPathMap.set(command.toLowerCase(), href);
-        this.pathToCommandMap.set(href, command);
+        const aliases = this.pathToCommandsMap.get(href) ?? [];
+        aliases.push(command);
+        this.pathToCommandsMap.set(href, aliases);
       }
     });
   }
@@ -105,9 +108,11 @@ export class YamahaDocClient {
       const childName = this.cleanName(childNameRaw);
       const childHref = childLink.attr('href');
 
-      if (childHref && this.pathToCommandMap.has(childHref)) {
-        const exactCommand = this.pathToCommandMap.get(childHref)!;
-        commands.push({ command: exactCommand, description: childName });
+      if (childHref && this.pathToCommandsMap.has(childHref)) {
+        const exactCommands = this.pathToCommandsMap.get(childHref)!;
+        for (const exactCommand of exactCommands) {
+          commands.push({ command: exactCommand, description: childName });
+        }
       } else if (childName) {
         const childNode = this.parseTocNode($, childLi);
         if (childNode) subCategories.push(childNode);
@@ -178,13 +183,18 @@ export class YamahaDocClient {
     return null;
   }
 
-  async getCommandDetail(path: string): Promise<CommandDetail | null> {
+  async getCommandDetail(path: string, preferredCommand?: string): Promise<CommandDetail | null> {
     const html = await this.fetchHtml(path);
     const $ = cheerio.load(html);
 
-    const commandName = this.pathToCommandMap.get(path) ?? $('h1.title').first().text().trim() ?? path;
+    const aliases = this.pathToCommandsMap.get(path) ?? [];
+    const preferredAlias = preferredCommand
+      ? aliases.find(alias => alias.toLowerCase() === preferredCommand.toLowerCase().trim())
+      : undefined;
+    const commandName = preferredAlias ?? aliases[0] ?? $('h1.title').first().text().trim() ?? path;
     const detail: CommandDetail = {
       command: commandName,
+      aliases,
       syntax: [],
       description: '',
       parameters: [],

@@ -15,10 +15,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["mcp", "yamaha", "rtx", "router", "cli", "llm"],
+  "author": "takaki-s",
+  "license": "MIT",
+  "description": "MCP server for Yamaha RTX router command reference",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "cheerio": "^1.2.0",
